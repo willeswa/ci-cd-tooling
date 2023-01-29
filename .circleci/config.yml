@@ -9,12 +9,21 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
+      - when:
+          condition:
+            equal: [chore/init-stack, << pipeline.git.branch >>]
+          steps:
+            - run:
+                name: Create the network stack
+                command: |
+                  chmod +x create-stack.sh
+                  ./create-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
       - run:
-          name: Create the network stack
+          name: Update the network stack
           command: |
-            cat ./infra/create-stack.sh >> create-stack.sh
-            chmod +x create-stack.sh
-            ./create-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID:2023:1} ./infra/network-infra.yml ./infra/network-infra-params.json
+            chmod +x update-stack.sh
+            ./update-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
+      
 
 workflows:
   aws-cli:

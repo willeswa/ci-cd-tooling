@@ -1,0 +1,144 @@
+Parameters: 
+  EnvironmentName:
+    Description: The pipeline that this script will be handling; can be development or production
+    Type: String
+  VPCCidrBlock:
+    Description: The VPC CIDR Block
+    Type: String
+  PublicSubnet1CIDR:
+    Description: The CIDR Block for the public subnet in AZ1
+    Type: String
+  PublicSubnet2CIDR:
+    Description: The CIDR Block for the public subnet in AZ2
+    Type: String
+  PrivateSubnet1CIDR:
+    Description: The CIDR Block for the private subnet in AZ1
+    Type: String
+  PrivateSubnet2CIDR:
+    Description: The CIDR Block for the private subnet in AZ2
+    Type: String
+
+Resources: 
+  MonkVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Pipeline
+          Value: !Ref EnvironmentName
+  MonkInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Pipeline
+          Value: !Ref EnvironmentName
+  MonkAttachInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MonkVPC
+      InternetGatewayId: !Ref MonkInternetGateway
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonkVPC
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Availability
+          Value: !Sub ${EnvironmentName}-PublicAZ1
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonkVPC
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Availability
+          Value: !Sub ${EnvironmentName}-PublicAZ2
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonkVPC
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      Tags:
+        - Key: Availability
+          Value: !Sub ${EnvironmentName}-PrivateAZ1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonkVPC
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      Tags:
+        - Key: Availability
+          Value: !Sub ${EnvironmentName}-PrivateAZ2
+  MonkNatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: MonkAttachInternetGateway
+    Properties:
+      Domain: vpc
+  MonkNatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: MonkAttachInternetGateway
+    Properties:
+      Domain: vpc
+  MonkNatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt MonkNatGateway1EIP.AllocationId
+  MonkNatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      AllocationId: !GetAtt MonkNatGateway2EIP.AllocationId
+  DefaultPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonkVPC
+      Tags:
+        - Key: Pipeline
+          Value: !Ref EnvironmentName
+  DefaultPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonkVPC
+      Tags:
+        - Key: Pipeline
+          Value: !Ref EnvironmentName
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: MonkAttachInternetGateway
+    Properties:
+      RouteTableId: !Ref DefaultPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MonkInternetGateway
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref DefaultPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref MonkNatGateway1
+  PublicRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref DefaultPublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+  PrivateRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref DefaultPrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+
+  
+
+
+
+
+# Outputs:

@@ -1,3 +1,5 @@
+Description: The network infra; optimized for high availability
+
 Parameters: 
   EnvironmentName:
     Description: The pipeline that this script will be handling; can be development or production
@@ -136,9 +138,31 @@ Resources:
       SubnetId: !Ref PrivateSubnet1
 
 
+Outputs:
+  VPC:
+    Description: The main vpc for the network
+    Value: !Ref MonkVPC
+    Export:
+      Name: !Sub ${EnvironmentName}-VPCID
+  PublicSubnet1:
+    Description: The public subnet in AZ 1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-PublicSubnet-AZ1
+  PrivateSubnet1:
+    Description: The private subnet in AZ 1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-PrivateSubnet-AZ1
+  PrivateSubnets:
+    Description: All private subnets in AZ 1
+    Value: !Join [ ",", [ !Ref PrivateSubnet1 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-PrivateSubnets-AZ1
+  PublicSubnets:
+    Description: All public subnets in AZ 1
+    Value: !Join [ ",", [ !Ref PublicSubnet1 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-PublicSubnets-AZ1
   
-
-
-
-
-# Outputs:
+  

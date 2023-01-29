@@ -17,15 +17,19 @@ jobs:
                 name: Create the network stack
                 command: |
                   chmod +x create-stack.sh
-                  ./create-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID:2023:1} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
+                  ./create-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
       - run:
           name: Update the network stack
           command: |
             chmod +x update-stack.sh
-            ./update-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID:2023:1} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
+            ./update-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
       
 
 workflows:
   aws-cli:
+  
     jobs:
-      - create-the-network-infra
+      - create-the-network-infra:
+          filters:
+            branches:
+              ignore: main

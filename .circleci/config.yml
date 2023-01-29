@@ -1,0 +1,22 @@
+version: 2.1
+
+orbs:
+  aws-cli: circleci/aws-cli@3.1
+
+jobs:
+  create-the-network-infra:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Create the network stack
+          command: |
+            cat ./infra/create-stack.sh >> create-stack.sh
+            chmod +x create-stack.sh
+            ./create-stack.sh monkinfra-${CIRCLE_WORKFLOW_ID:2023:1} ./infra/network-infra.yml ./infra/network-infra-params.json
+
+workflows:
+  aws-cli:
+    jobs:
+      - create-the-network-infra

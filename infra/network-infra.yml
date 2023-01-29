@@ -1,0 +1,22 @@
+Parameters: 
+  EnvironmentName:
+    Description: The pipeline that this script will be handling; can be development or production
+    Type: String
+  VPCCidrBlock:
+    Description: The VPC CIDR Block
+    Type: String
+
+Resources: 
+  MonkVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Pipeline
+          Value: !Ref EnvironmentName
+
+
+
+# Outputs:

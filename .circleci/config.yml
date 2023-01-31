@@ -3,33 +3,48 @@ version: 2.1
 orbs:
   aws-cli: circleci/aws-cli@3.1
 
+commands:
+  roll-back-deployment:
+      steps:
+        - run:
+            name: Destroy environment
+            when: on_fail
+            command: |
+              aws cloudformation delete-stack --stack-name monkinfra-${CIRCLE_PROJECT_REPONAME}
+
 jobs:
+
   create-the-network-infra:
     docker:
       - image: amazon/aws-cli
     steps:
       - checkout
-      - when:
-          condition:
-            equal: [chore/init-stack, << pipeline.git.branch >>]
-          steps:
-            - run:
-                name: Create the network stack
-                command: |
-                  chmod +x create-stack.sh
-                  ./create-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
       - run:
-          name: Update the network stack
+          name: Create the network stack
           command: |
-            chmod +x update-stack.sh
-            ./update-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
+            chmod +x create-stack.sh
+            ./create-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
+      - roll-back-deployment
+
+  provision-ec2-instances:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Create the network stack
+          command: |
+            chmod +x create-stack.sh
+            ./create-stack.sh servers-${CIRCLE_PROJECT_REPONAME} ./infra-servers/servers.yml ./infra-servers/servers-params.json
+
+
       
 
 workflows:
   aws-cli:
   
     jobs:
-      - create-the-network-infra:
-          filters:
-            branches:
-              ignore: main
+      # - create-the-network-infra
+      - provision-ec2-instances
+          # requires:
+          #   - create-the-network-infra

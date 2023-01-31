@@ -1,0 +1,8 @@
+- name: Set up server
+  hosts: all
+  user: ubuntu
+  become: true
+  become_user: root
+  become_method: sudo
+  roles:
+    - setup

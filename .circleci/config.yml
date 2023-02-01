@@ -5,15 +5,17 @@ orbs:
 
 commands:
   roll-back-deployment:
-      steps:
-        - run:
-            name: Destroy environment
-            when: on_fail
-            command: |
-              aws cloudformation delete-stack --stack-name monkinfra-${CIRCLE_PROJECT_REPONAME}
+    parameters:
+      stack_name:
+        type: string
+    steps:
+      - run:
+          name: Destroy environment
+          when: on_fail
+          command: |
+            aws cloudformation delete-stack --stack-name << parameters.stack_name >>
 
 jobs:
-
   create-the-network-infra:
     docker:
       - image: amazon/aws-cli
@@ -24,7 +26,8 @@ jobs:
           command: |
             chmod +x create-stack.sh
             ./create-stack.sh monkinfra-${CIRCLE_PROJECT_REPONAME} ./infra-network/network-infra.yml ./infra-network/network-infra-params.json
-      - roll-back-deployment
+      - roll-back-deployment:
+          stack_name: monkinfra-${CIRCLE_PROJECT_REPONAME}
 
   provision-ec2-instances:
     docker:
@@ -36,15 +39,46 @@ jobs:
           command: |
             chmod +x create-stack.sh
             ./create-stack.sh servers-${CIRCLE_PROJECT_REPONAME} ./infra-servers/servers.yml ./infra-servers/servers-params.json
-
+      - roll-back-deployment:
+          stack_name: servers-${CIRCLE_PROJECT_REPONAME}
+  configure-ec2-instance:
+    docker:
+      - image: python:3.8.16-alpine3.16
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["39:20:1d:11:95:0d:74:b2:e6:fa:f0:52:51:ab:07:b8", "73:e7:bc:43:73:c9:a3:0d:9f:bf:e6:2a:06:a2:0b:36"]
+      - run:
+          name: Install Dependencies
+          command: |
+            apk add --update ansible
+      - run:
+          name: Configure the server
+          command: |
+            apk add openssh-client
+            ssh-keyscan 54.197.83.59 >> ~/.ssh/known_hosts
+            ansible-playbook -i inventory.txt main.yml 
+  clean-up-deployment:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Force fail
+          command: |
+            return 1
+      - roll-back-deployment:
+          stack_name: servers-${CIRCLE_PROJECT_REPONAME}
 
       
 
 workflows:
   aws-cli:
-  
     jobs:
-      # - create-the-network-infra
-      - provision-ec2-instances
-          # requires:
-          #   - create-the-network-infra
+      # - create-the-network-infra:
+      #     filters:
+      #       branches:
+      #         ignore: main
+      # - provision-ec2-instances
+      - configure-ec2-instance
+      - clean-up-deployment

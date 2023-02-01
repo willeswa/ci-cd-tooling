@@ -1,0 +1,24 @@
+---
+- name: Update apt packages
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: Upgrade cache
+  become: yes
+  apt:
+    upgrade: yes
+
+- name: Remove no longer required Dependencies
+  become: yes
+  apt:
+    autoremove: yes
+
+- name: Install dependencies
+  become: yes
+  apt:
+    name:
+      - nodejs
+      - npm
+    state: latest
+    update_cache: yes
